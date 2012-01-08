@@ -105,7 +105,7 @@ app.configure( function(done) {
 // Routes
 // -------------
 app.get('*',function(req,res,next){
-	if (	 process.env.FORCE_SSL != true 
+	if (	 Boolean(process.env.FORCE_SSL) != true 
 		  || req.headers["x-forwarded-proto"] === "https"){
 		return next();
 	}
