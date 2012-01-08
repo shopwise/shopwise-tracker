@@ -1,3 +1,12 @@
+/*
+* AVAILABLE ENVIRONMENT VARIABLES
+* -------------------------------
+* - LOG_LEVEL[="debug"]
+* - MONGODB_URL[="mongodb://localhost:27017/shopwise-tracker"]
+* - FORCE_SSL[=false]
+*
+*/
+
 // -------------------
 // Module dependencies
 // -------------------
@@ -27,11 +36,6 @@ var iso8601_pattern = /^([\+-]?\d{4}(?!\d{2}\b))((-?)((0[1-9]|1[0-2])(\3([12]\d|
 	, email_pattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
 
 var validation_schema = {
-	/* To check date:
-	* type => "date-time" is not implemented in JSV library
-	*	pattern => Regular expressions synthax /.../ is not supported
-	*	Dates will be checked afterward	
-	*/
 	"type" : "object",
   "properties" : {
 		"begin" : { 
@@ -100,6 +104,14 @@ app.configure( function(done) {
 // -------------
 // Routes
 // -------------
+app.get('*',function(req,res,next){
+	if (	 process.env.FORCE_SSL != true 
+		  || req.headers["x-forwarded-proto"] === "https"){
+		return next();
+	}
+ 	res.redirect("https://" + req.headers.host + req.url);	
+});
+
 app.get('/', function(request, response) {
 		response.send("WELCOME TO THE SHOPWISE TRACKER...");
 });
@@ -109,7 +121,6 @@ app.post('/sessions', function(request, response) {
 		//
 		// SYNCHRONOUS TREATMENT => JSON validation
 		//
-		
 		var error = null;
 		var result = null;
 		var status = 200;
@@ -140,7 +151,6 @@ app.post('/sessions', function(request, response) {
 		//
 		// ASYNCHRONOUS TREATMENT => Save it to the DB
 		//
-		
 		var device_hash = session_json.device;
 		if(device_hash){
 			log.debug("device:before");
@@ -168,20 +178,9 @@ app.post('/sessions', function(request, response) {
 // --------
 // UTILS
 // --------
-
 function handle_mongo_callback(collection_name, err){
 		log.debug(collection_name + " : after");
 		if(err){
 					log.warning("Failed to save "+ collection_name+ " document. Error: " + err);
 		}
 }
-
-function pause_comp(millis)
- {
-  var date = new Date();
-  var curDate = null;
-  do { curDate = new Date(); }
-  while(curDate-date < millis);
-}
-
-
