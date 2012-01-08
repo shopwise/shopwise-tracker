@@ -1,7 +1,8 @@
 // -------------------
 // Module dependencies
 // -------------------
-var sys = require('sys');
+var Log = require('log')
+  , log = new Log(process.env.LOG_LEVEL || "debug"); 
 
 var Express = require('express')
 	, configure = require('express-configure')
@@ -11,11 +12,8 @@ var JSV = require('JSV').JSV
 	, jsv = JSV.createEnvironment('json-schema-draft-03')
 	, jsv_env = new JSV.Environment();
 
-var Log = require('log')
-  , log = new Log('debug');
-
 var MongoSkin = require("mongoskin")
-	, db = MongoSkin.db('mongodb://shopwise:ShopWise2010@ds029267.mongolab.com:29267/shopwise-analytics-stagging')
+	, db = MongoSkin.db(process.env.MONGODB_URL || 'mongodb://localhost:27017/shopwise-tracker')
 	, devices = db.collection("devices")
 	, users = db.collection("users")
 	, sessions = db.collection("sessions");
@@ -78,7 +76,7 @@ var validation_schema = {
 			"type" : "array",
 			"required" : true,
 			"items" : {
-					"code" : { "type" : "string", "required" : true },
+					"name": { "type" : "string", "required" : true },
 					"params" : {
 						"type" : "object",
 						"required" : true
@@ -103,7 +101,7 @@ app.configure( function(done) {
 // Routes
 // -------------
 app.get('/', function(request, response) {
-		response.send("WELCOME TO THE SHOPWISE LOGGER...");
+		response.send("WELCOME TO THE SHOPWISE TRACKER...");
 });
 
 app.post('/sessions', function(request, response) {
@@ -150,21 +148,22 @@ app.post('/sessions', function(request, response) {
 				handle_mongo_callback("devices", err);
 			});
 		}
-	 	 var user_hash = session_json.user;
-	 	 if(user_hash){
+	 	var user_hash = session_json.user;
+	 	if(user_hash){
 	 	 	log.debug("user:before");
 	 	 	users.update({ "email" : user_hash.email }, { $set: user_hash }, {upsert: true}, function(err){
 	 	 		handle_mongo_callback("users", err);
 	 	 	});
-	 	 }
+	 	}
 	 	 
-	 	 log.debug("session:before");
-	 	 sessions.insert(session_json, {},  function(err){
-					handle_mongo_callback("sessions", err);
-	 	 	});
-	 	 log.debug("END");
-		
+	 	log.debug("session:before");
+	 	sessions.insert(session_json, {},  function(err){
+				handle_mongo_callback("sessions", err);
+	 	});
+	 	 
+		log.debug("END");
 });
+
 
 // --------
 // UTILS
@@ -173,7 +172,7 @@ app.post('/sessions', function(request, response) {
 function handle_mongo_callback(collection_name, err){
 		log.debug(collection_name + " : after");
 		if(err){
-					log.error("Failed to save "+ collection_name+ " document. Error: " + err);
+					log.warning("Failed to save "+ collection_name+ " document. Error: " + err);
 		}
 }
 
